@@ -204,7 +204,7 @@
   // Sites like YouTube also move the video (left/top) without resizing it;
   // catch those style writes too, before the next paint.
   const styleObserver = new MutationObserver(() => settings.enabled && update());
-  const observed = new WeakSet();
+  let observed = new WeakSet();
   function observe(video) {
     if (!observed.has(video)) {
       styleObserver.observe(video, { attributes: true, attributeFilter: ["style", "class"] });
@@ -219,13 +219,18 @@
 
   // Right after entering or leaving fullscreen the window and player keep
   // settling for a moment; track them every frame until they do.
+  // Safari fires both fullscreenchange and webkitfullscreenchange, so a
+  // second call just extends the loop that is already running.
   let settleUntil = 0;
+  let settling = false;
   function settle() {
     settleUntil = performance.now() + 1500;
+    if (settling) return;
+    settling = true;
     const tick = () => {
-      if (!settings.enabled) return;
-      update();
-      if (performance.now() < settleUntil) requestAnimationFrame(tick);
+      if (settings.enabled) update();
+      if (settings.enabled && performance.now() < settleUntil) requestAnimationFrame(tick);
+      else settling = false;
     };
     requestAnimationFrame(tick);
   }
@@ -238,11 +243,16 @@
     settings = { ...DEFAULTS, ...next };
     if (settings.enabled) {
       update();
-      if (!timerId) timerId = setInterval(schedule, 1000);
+      // Safety net for changes no event reports; skipped in background tabs.
+      if (!timerId) timerId = setInterval(() => !document.hidden && schedule(), 1000);
     } else {
       clearInterval(timerId);
       timerId = 0;
       update();
+      // Nothing to watch while off.
+      resizeObserver.disconnect();
+      styleObserver.disconnect();
+      observed = new WeakSet();
     }
   }
 
@@ -259,7 +269,6 @@
     }, true);
   }
   window.addEventListener("resize", () => settings.enabled && update());
-  window.addEventListener("scroll", () => settings.enabled && schedule(), { passive: true });
 
   api.storage.local.get(DEFAULTS).then(applySettings);
   api.storage.onChanged.addListener((changes, area) => {
