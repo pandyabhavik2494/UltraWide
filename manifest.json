@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "UltraWide",
+  "version": "1.0.0",
+  "description": "Make videos fill your ultrawide window by cropping or zooming away the black bars.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png",
+    "256": "icons/icon-256.png",
+    "512": "icons/icon-512.png"
+  },
+  "action": {
+    "default_title": "UltraWide",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/toolbar-off-16.png",
+      "32": "icons/toolbar-off-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_start"
+    }
+  ],
+  "commands": {
+    "toggle-ultrawide": {
+      "suggested_key": {
+        "default": "Alt+Shift+U",
+        "mac": "Alt+Shift+U"
+      },
+      "description": "Toggle UltraWide on or off"
+    }
+  }
+}
